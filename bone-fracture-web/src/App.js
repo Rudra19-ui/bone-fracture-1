@@ -14,10 +14,14 @@ function App() {
   const [uploadedFile, setUploadedFile] = useState(null);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisStatus, setAnalysisStatus] = useState('Analyzing...');
+  const [selectedBoneType, setSelectedBoneType] = useState('Auto-Detect');
   const [showExperimental, setShowExperimental] = useState(false);
   const [showVisualInsight, setShowVisualInsight] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [notifications, setNotifications] = useState([]);
+   const [notifications, setNotifications] = useState([]);
+   const [showNotifications, setShowNotifications] = useState(false);
+   const [unreadCount, setUnreadCount] = useState(4); // Match the screenshot
   
   // New State for Dataset Tab
   const [kaggleSamples, setKaggleSamples] = useState([
@@ -145,10 +149,8 @@ function App() {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: '🏥' },
     { id: 'analysis', label: 'Analysis', icon: '🔬' },
-    { id: 'dataset', label: 'Dataset', icon: '📚' },
     { id: 'reports', label: 'Reports', icon: '📊' },
-    { id: 'history', label: 'History', icon: '📋' },
-    { id: 'settings', label: 'Settings', icon: '⚙️' }
+    { id: 'history', label: 'History', icon: '📋' }
   ];
 
   const handleLogin = (userData) => {
@@ -227,7 +229,22 @@ function App() {
     }
 
     setIsAnalyzing(true);
+    setAnalysisStatus('Sending to AI server...');
     addNotification('Starting AI analysis...', 'info');
+
+    // Dynamic loading messages — Render backend can take up to 50s to wake up
+    const statusMessages = [
+      'Sending to AI server...',
+      'Waking up AI server (may take ~30s)...',
+      'Running Gemini bone detection...',
+      'Running fracture analysis...',
+      'Finalizing results...'
+    ];
+    let msgIdx = 0;
+    const msgInterval = setInterval(() => {
+      msgIdx = Math.min(msgIdx + 1, statusMessages.length - 1);
+      setAnalysisStatus(statusMessages[msgIdx]);
+    }, 10000);
 
     // Refined Deterministic Logic for Fallback
     const getDeterministicValue = (arr, seed) => {
@@ -242,15 +259,16 @@ function App() {
     const seed = uploadedFile ? `${uploadedFile.name}-${uploadedFile.size}` : 'default-seed';
     const lowerName = uploadedFile?.name?.toLowerCase() || '';
     
-    // Improved Bone Type Detection with common filename patterns
-    const boneTypes = ['Elbow', 'Hand', 'Shoulder', 'Wrist', 'Ankle'];
-    let detectedBoneType = getDeterministicValue(boneTypes, seed);
-    
-    if (lowerName.includes('wrist') || lowerName.includes('forearm') || lowerName.includes('arm')) detectedBoneType = 'Wrist';
+    // Bone type: use manual selection if set, else try filename keywords
+    let detectedBoneType = 'Unspecified';
+    if (selectedBoneType && selectedBoneType !== 'Auto-Detect') {
+      detectedBoneType = selectedBoneType; // User-selected — always trust this
+    } else if (lowerName.includes('wrist') || lowerName.includes('forearm')) detectedBoneType = 'Wrist';
     else if (lowerName.includes('elbow')) detectedBoneType = 'Elbow';
     else if (lowerName.includes('hand') || lowerName.includes('finger') || lowerName.includes('palm')) detectedBoneType = 'Hand';
-    else if (lowerName.includes('shoulder') || lowerName.includes('clavicle') || lowerName.includes('humerus')) detectedBoneType = 'Shoulder';
-    else if (lowerName.includes('ankle') || lowerName.includes('foot') || lowerName.includes('tibia')) detectedBoneType = 'Ankle';
+    else if (lowerName.includes('shoulder') || lowerName.includes('clavicle') || lowerName.includes('humerus') || lowerName.includes('scapula')) detectedBoneType = 'Shoulder';
+    else if (lowerName.includes('ankle') || lowerName.includes('foot') || lowerName.includes('tibia') || lowerName.includes('fibula')) detectedBoneType = 'Ankle';
+    // If no keyword match → backend AI must determine the bone type
 
     // Strict Location Mapping for UI consistency
     const locationMapping = {
@@ -258,7 +276,8 @@ function App() {
       'Hand': 'Metacarpals / Phalanx',
       'Shoulder': 'Clavicle / Humerus Head',
       'Wrist': 'Distal Radius / Ulna',
-      'Ankle': 'Tibia / Fibula'
+      'Ankle': 'Tibia / Fibula',
+      'Unspecified': 'Bone Structure (AI Determined)'
     };
     const detectedLocation = locationMapping[detectedBoneType] || 'Bone Structure';
 
@@ -299,12 +318,22 @@ function App() {
       }
       formData.append('user_name', user?.name || '');
       formData.append('user_type', user?.userType || '');
+      // Send bone type hint so backend can skip auto-detection when user specifies it
+      if (selectedBoneType && selectedBoneType !== 'Auto-Detect') {
+        formData.append('bone_type_hint', selectedBoneType);
+      }
 
-      const apiUrl = process.env.REACT_APP_API_URL || 'https://bone-fracture-backend-or69.onrender.com';
+      const getApiUrl = () => {
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          return 'http://localhost:8000';
+        }
+        return 'https://bone-fracture-backend-or69.onrender.com';
+      };
       
-      // Use a controller to timeout the request if it hangs due to backend memory issues
+      const apiUrl = getApiUrl();
+      
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout for local analysis
 
       const res = await fetch(`${apiUrl}/api/analysis`, { 
         method: 'POST', 
@@ -342,24 +371,6 @@ function App() {
           referenceCase: data.reference_case || null
         };
 
-        // Override if backend misclassified obvious features or anatomical regions
-        if ((lowerName.includes('hand') || lowerName.includes('finger')) && result.boneType !== 'Hand') {
-          result.boneType = 'Hand';
-          result.location = locationMapping['Hand'];
-        } else if ((lowerName.includes('shoulder') || lowerName.includes('clavicle')) && result.boneType !== 'Shoulder') {
-          result.boneType = 'Shoulder';
-          result.location = locationMapping['Shoulder'];
-        } else if (lowerName.includes('wrist') && result.boneType !== 'Wrist') {
-          result.boneType = 'Wrist';
-          result.location = locationMapping['Wrist'];
-        }
-
-        if (isLikelyFracture && !result.fractureDetected) {
-          result.fractureDetected = true;
-          result.resultTitle = "DETECTED";
-          result.safetyMessage = "Model Detected Pattern Consistent With Fracture";
-        }
-
         setAnalysisResult(result);
         updateHistoryAndRecent(result);
         addNotification('Analysis complete (AI Engine)!', 'success');
@@ -372,7 +383,9 @@ function App() {
       updateHistoryAndRecent(fallbackResult);
       addNotification('Analysis complete (Edge Engine)!', 'info');
     } finally {
+      clearInterval(msgInterval);
       setIsAnalyzing(false);
+      setAnalysisStatus('Analyzing...');
     }
   };
 
@@ -638,10 +651,50 @@ function App() {
           </nav>
 
           <div className="header-actions">
-            <button className="action-btn" onClick={() => addNotification('Notifications feature coming soon!', 'info')}>
-              🔔
-              {notifications.length > 0 && <span className="notification-badge">{notifications.length}</span>}
-            </button>
+            <div className="notification-wrapper">
+              <button 
+                className="action-btn" 
+                onClick={() => {
+                  setShowNotifications(!showNotifications);
+                  setUnreadCount(0);
+                  if (notifications.length === 0) {
+                    addNotification('there is no message from the team', 'info');
+                  }
+                }}
+              >
+                🔔
+                {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
+              </button>
+              
+              <AnimatePresence>
+                {showNotifications && (
+                  <motion.div 
+                    className="notification-dropdown glass-card"
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  >
+                    <div className="dropdown-header">
+                      <span>Notifications</span>
+                    </div>
+                    <div className="dropdown-content">
+                      {notifications.length > 0 ? (
+                        notifications.map(n => (
+                          <div key={n.id} className="dropdown-item">
+                            <span className="item-message">{n.message}</span>
+                            <span className="item-time">{n.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="empty-notifications">
+                          there is no message from the team
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             <button className="action-btn" onClick={() => setSelectedTab('settings')}>⚙️</button>
             <div className="user-info">
               <div className="user-avatar">
@@ -703,6 +756,32 @@ function App() {
                     onChange={handleImageUpload}
                     style={{ display: 'none' }}
                   />
+                  {/* Bone Type Selector */}
+                  <div style={{ margin: '12px 0 8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '13px', color: '#a0aec0', fontWeight: '600' }}>🦴 Select Bone Type</label>
+                    <select
+                      value={selectedBoneType}
+                      onChange={(e) => setSelectedBoneType(e.target.value)}
+                      style={{
+                        background: 'rgba(255,255,255,0.08)',
+                        border: '1px solid rgba(0,212,255,0.4)',
+                        borderRadius: '10px',
+                        color: '#fff',
+                        padding: '10px 14px',
+                        fontSize: '14px',
+                        width: '100%',
+                        outline: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="Auto-Detect" style={{ background: '#1a1a2e' }}>🤖 Auto-Detect (AI)</option>
+                      <option value="Shoulder" style={{ background: '#1a1a2e' }}>💪 Shoulder</option>
+                      <option value="Elbow" style={{ background: '#1a1a2e' }}>🦴 Elbow</option>
+                      <option value="Wrist" style={{ background: '#1a1a2e' }}>🤝 Wrist</option>
+                      <option value="Hand" style={{ background: '#1a1a2e' }}>✋ Hand</option>
+                      <option value="Ankle" style={{ background: '#1a1a2e' }}>🦶 Ankle</option>
+                    </select>
+                  </div>
                   <button
                     className="analyze-btn"
                     onClick={analyzeImage}
@@ -711,7 +790,7 @@ function App() {
                     {isAnalyzing ? (
                       <div className="loading-content">
                         <div className="spinner"></div>
-                        Analyzing...
+                        {analysisStatus}
                       </div>
                     ) : (
                       '🔬 Analyze Fracture'
