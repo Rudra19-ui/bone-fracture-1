@@ -2,20 +2,19 @@
 __pycache__/
 *.py[cod]
 *$py.class
-.venv/
-env/
-venv/
-ENV/
+**/venv/
+**/env/
+**/.venv/
+**/ENV/
 
 # Node
-node_modules/
+**/node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
 # React
-bone-fracture-web/node_modules/
-bone-fracture-web/build/
+**/build/
 
 # IDEs
 .vscode/
