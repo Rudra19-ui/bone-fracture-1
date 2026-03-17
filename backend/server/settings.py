@@ -12,7 +12,7 @@ DATA_DIR = Path("/data") if os.path.exists("/data") else BASE_DIR
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'dev-secret-key')
 DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'bone-fracture-backend-or69.onrender.com,bone-fracture-detects-api.onrender.com,localhost').split(',')
+ALLOWED_HOSTS = ['*']  # Allow all hosts for public access
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -79,6 +79,28 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = DATA_DIR / 'media'
 
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'https://bone-fracture-frontend.onrender.com,https://bone-fracture-detects-web.onrender.com,http://localhost:3000').split(',')
+# Allow all origins for public access
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = []  # Empty list when using CORS_ALLOW_ALL_ORIGINS
+
+# Allow all headers for maximum compatibility
+CORS_ALLOW_ALL_HEADERS = True
+
+# Allow all methods
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# Common CORS settings
+CORS_ALLOW_HEADERS = [
+    'content-type',
+    'authorization',
+    'x-requested-with',
+]
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

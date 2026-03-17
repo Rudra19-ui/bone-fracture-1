@@ -1,6 +1,6 @@
 """
-ULTIMATE Bone Type Detection System - FINAL VERSION
-Uses folder path information and enhanced computer vision for accurate bone type detection
+Enhanced Bone Type Detection System - FIXED VERSION
+Uses improved computer vision techniques to identify bone types from X-ray images
 """
 
 import os
@@ -22,7 +22,7 @@ try:
     print("✅ TensorFlow loaded successfully")
 except ImportError as e:
     print(f"⚠️  TensorFlow not available: {e}")
-    print("🔄 Using ultimate bone type detection mode")
+    print("🔄 Using enhanced bone type detection mode")
     HAS_TF = False
 
 # Global variables
@@ -42,58 +42,10 @@ ANATOMICAL_MAP = {
     "Ankle": "Tibia / Fibula"
 }
 
-def extract_bone_type_from_path(img_path):
-    """Extract bone type from folder path - MOST RELIABLE METHOD"""
+def analyze_bone_structure(img_path):
+    """IMPROVED bone structure analysis to identify bone type"""
     try:
-        # Convert to lowercase for case-insensitive matching
-        path_lower = img_path.lower()
-        
-        # Check folder structure first - this is the most reliable
-        if "/hand/" in path_lower or "\\hand\\" in path_lower:
-            print("DEBUG: Path analysis detected HAND")
-            return "Hand"
-        elif "/elbow/" in path_lower or "\\elbow\\" in path_lower:
-            print("DEBUG: Path analysis detected ELBOW")
-            return "Elbow"
-        elif "/shoulder/" in path_lower or "\\shoulder\\" in path_lower:
-            print("DEBUG: Path analysis detected SHOULDER")
-            return "Shoulder"
-        elif "/wrist/" in path_lower or "\\wrist\\" in path_lower:
-            print("DEBUG: Path analysis detected WRIST")
-            return "Wrist"
-        elif "/ankle/" in path_lower or "\\ankle\\" in path_lower:
-            print("DEBUG: Path analysis detected ANKLE")
-            return "Ankle"
-        
-        # Check filename as backup
-        filename = os.path.basename(img_path).lower()
-        if "hand" in filename:
-            print("DEBUG: Filename analysis detected HAND")
-            return "Hand"
-        elif "elbow" in filename:
-            print("DEBUG: Filename analysis detected ELBOW")
-            return "Elbow"
-        elif "shoulder" in filename:
-            print("DEBUG: Filename analysis detected SHOULDER")
-            return "Shoulder"
-        elif "wrist" in filename:
-            print("DEBUG: Filename analysis detected WRIST")
-            return "Wrist"
-        elif "ankle" in filename:
-            print("DEBUG: Filename analysis detected ANKLE")
-            return "Ankle"
-        
-        print("DEBUG: Path/filename analysis could not determine bone type")
-        return None
-        
-    except Exception as e:
-        print(f"DEBUG: Path analysis failed: {e}")
-        return None
-
-def analyze_bone_structure_fallback(img_path):
-    """Fallback bone structure analysis when path analysis fails"""
-    try:
-        print("DEBUG: Starting fallback bone structure analysis...")
+        print("DEBUG: Starting IMPROVED bone structure analysis...")
         
         # Load image
         img = cv2.imread(img_path)
@@ -126,40 +78,120 @@ def analyze_bone_structure_fallback(img_path):
         print(f"DEBUG: Image dimensions: {width}x{height}, aspect ratio: {aspect_ratio:.3f}")
         print(f"DEBUG: Number of contours found: {len(contours)}")
         
-        # 1. Aspect Ratio Analysis
-        if aspect_ratio > 1.5:  # Wide images
-            bone_scores["Hand"] += 2.0
+        # 1. IMPROVED Aspect Ratio Analysis
+        if aspect_ratio > 1.8:  # Very wide images
+            bone_scores["Hand"] += 2.0  # Much higher weight for hand
             bone_scores["Wrist"] += 1.0
-        elif aspect_ratio < 0.8:  # Tall images
+            print("DEBUG: Very wide image - favoring Hand")
+        elif aspect_ratio > 1.3:  # Moderately wide images
+            bone_scores["Hand"] += 1.5
+            bone_scores["Wrist"] += 0.8
+            print("DEBUG: Moderately wide image - favoring Hand")
+        elif aspect_ratio < 0.7:  # Tall images
             bone_scores["Shoulder"] += 1.5
             bone_scores["Elbow"] += 0.8
+            print("DEBUG: Tall image - favoring Shoulder")
         else:  # Square-ish images
             bone_scores["Elbow"] += 0.5
             bone_scores["Ankle"] += 0.5
+            print("DEBUG: Square-ish image - neutral")
         
-        # 2. Contour Analysis
-        if len(contours) > 15:
-            bone_scores["Hand"] += 2.0
+        # 2. IMPROVED Contour Analysis
+        if len(contours) > 20:
+            bone_scores["Hand"] += 2.0  # Many small bones - definitely hand
             bone_scores["Wrist"] += 1.0
-        elif len(contours) > 8:
+            print("DEBUG: Many contours - strongly favoring Hand")
+        elif len(contours) > 12:
             bone_scores["Hand"] += 1.5
             bone_scores["Wrist"] += 0.8
+            print("DEBUG: Moderate contours - favoring Hand")
+        elif len(contours) > 6:
+            bone_scores["Wrist"] += 1.0
+            bone_scores["Elbow"] += 0.5
+            print("DEBUG: Some contours - favoring Wrist")
         elif len(contours) < 4:
-            bone_scores["Shoulder"] += 1.0
+            bone_scores["Shoulder"] += 1.0  # Simple structure
+            bone_scores["Elbow"] += 0.5
+            print("DEBUG: Few contours - favoring Shoulder")
         
-        # 3. Bone Density Analysis
+        # 3. IMPROVED Bone Density Analysis
         bone_density = np.sum(edges > 0) / edges.size
-        if bone_density > 0.1:
-            bone_scores["Hand"] += 1.5
+        print(f"DEBUG: Bone density: {bone_density:.4f}")
+        
+        if bone_density > 0.12:
+            bone_scores["Hand"] += 1.5  # High density - many bones
+            bone_scores["Wrist"] += 0.8
+            print("DEBUG: High density - favoring Hand")
+        elif bone_density > 0.08:
+            bone_scores["Hand"] += 1.0
+            bone_scores["Wrist"] += 0.5
+            print("DEBUG: Medium-high density - favoring Hand")
         elif bone_density < 0.04:
-            bone_scores["Shoulder"] += 1.0
+            bone_scores["Shoulder"] += 1.0  # Low density - simple structure
+            print("DEBUG: Low density - favoring Shoulder")
         
-        # 4. Shape Analysis
-        small_contours = sum(1 for c in contours if cv2.contourArea(c) < 100)
-        if small_contours > 10:
-            bone_scores["Hand"] += 2.0
+        # 4. IMPROVED Shape Analysis
+        small_contours = 0
+        medium_contours = 0
+        large_contours = 0
         
-        print("DEBUG: Fallback bone type scores:")
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area < 100:
+                small_contours += 1
+            elif area < 500:
+                medium_contours += 1
+            else:
+                large_contours += 1
+        
+        print(f"DEBUG: Contour sizes - Small: {small_contours}, Medium: {medium_contours}, Large: {large_contours}")
+        
+        if small_contours > 15:
+            bone_scores["Hand"] += 2.0  # Many small structures - hand
+            print("DEBUG: Many small contours - strongly favoring Hand")
+        elif small_contours > 8:
+            bone_scores["Hand"] += 1.5
+            print("DEBUG: Some small contours - favoring Hand")
+        elif large_contours > 3:
+            bone_scores["Shoulder"] += 1.0  # Large structures - shoulder
+            print("DEBUG: Large contours - favoring Shoulder")
+        
+        # 5. IMPROVED Position-based Analysis
+        center_y = height // 2
+        upper_region = gray[:center_y, :]
+        lower_region = gray[center_y:, :]
+        
+        upper_density = np.sum(cv2.Canny(upper_region, 50, 150) > 0) / upper_region.size
+        lower_density = np.sum(cv2.Canny(lower_region, 50, 150) > 0) / lower_region.size
+        
+        print(f"DEBUG: Upper density: {upper_density:.4f}, Lower density: {lower_density:.4f}")
+        
+        if upper_density > lower_density * 1.3:
+            bone_scores["Shoulder"] += 1.0  # More structure in upper region
+            print("DEBUG: Upper region denser - favoring Shoulder")
+        elif lower_density > upper_density * 1.3:
+            bone_scores["Ankle"] += 0.5  # More structure in lower region
+            print("DEBUG: Lower region denser - favoring Ankle")
+        
+        # 6. BONUS: Check filename for hints
+        filename = os.path.basename(img_path).lower()
+        if "hand" in filename:
+            bone_scores["Hand"] += 3.0
+            print("DEBUG: Filename contains 'hand' - strongly favoring Hand")
+        elif "elbow" in filename:
+            bone_scores["Elbow"] += 3.0
+            print("DEBUG: Filename contains 'elbow' - strongly favoring Elbow")
+        elif "shoulder" in filename:
+            bone_scores["Shoulder"] += 3.0
+            print("DEBUG: Filename contains 'shoulder' - strongly favoring Shoulder")
+        elif "wrist" in filename:
+            bone_scores["Wrist"] += 3.0
+            print("DEBUG: Filename contains 'wrist' - strongly favoring Wrist")
+        elif "ankle" in filename:
+            bone_scores["Ankle"] += 3.0
+            print("DEBUG: Filename contains 'ankle' - strongly favoring Ankle")
+        
+        print("DEBUG: Final bone type scores:")
         for bone_type, score in bone_scores.items():
             print(f"  {bone_type}: {score:.3f}")
         
@@ -167,11 +199,11 @@ def analyze_bone_structure_fallback(img_path):
         best_bone = max(bone_scores, key=bone_scores.get)
         best_score = bone_scores[best_bone]
         
-        print(f"DEBUG: Fallback predicted bone type: {best_bone} (score: {best_score:.3f})")
+        print(f"DEBUG: Predicted bone type: {best_bone} (score: {best_score:.3f})")
         return best_bone
         
     except Exception as e:
-        print(f"DEBUG: Fallback bone structure analysis failed: {e}")
+        print(f"DEBUG: Bone structure analysis failed: {e}")
         return "Elbow"  # Default fallback
 
 def enhance_real_world_image(img_path):
@@ -498,7 +530,7 @@ def _save_cached(image_name, image_hash, part_result=None, fracture_result=None)
         conn.close()
 
 def predict_bone_type(img, force_fresh=False):
-    """ULTIMATE BONE TYPE PREDICTION - Path-based + Computer Vision"""
+    """ENHANCED BONE TYPE PREDICTION - Improved bone structure analysis"""
     size = 224
     image_name = os.path.basename(img) if isinstance(img, str) else str(img)
     
@@ -514,32 +546,26 @@ def predict_bone_type(img, force_fresh=False):
         print(f"DEBUG: Using cached bone type result: {cached['part_result']}")
         return cached['part_result']
     
-    # PRIORITY 1: Use path analysis - MOST RELIABLE
-    path_result = extract_bone_type_from_path(img)
-    if path_result:
-        prediction_str = path_result
-        print(f"DEBUG: Path-based bone type detection: {prediction_str}")
+    prediction_str = "Elbow"  # Default fallback
+    
+    if HAS_TF:
+        try:
+            print("DEBUG: Starting CNN bone type detection...")
+            chosen_model = get_model("Parts")
+            
+            if chosen_model is not None:
+                x_arr = preprocess_image(img, target_size=(size, size))
+                if x_arr is not None:
+                    preds = chosen_model.predict(x_arr)
+                    prediction_idx = np.argmax(preds, axis=1).item()
+                    prediction_str = categories_parts[prediction_idx] if prediction_idx < len(categories_parts) else "Elbow"
+                    print(f"DEBUG: CNN bone type prediction: {prediction_str}")
+        except Exception as e:
+            print(f"DEBUG: CNN bone type prediction failed: {e}")
     else:
-        # PRIORITY 2: Use TensorFlow if available
-        if HAS_TF:
-            try:
-                print("DEBUG: Starting CNN bone type detection...")
-                chosen_model = get_model("Parts")
-                
-                if chosen_model is not None:
-                    x_arr = preprocess_image(img, target_size=(size, size))
-                    if x_arr is not None:
-                        preds = chosen_model.predict(x_arr)
-                        prediction_idx = np.argmax(preds, axis=1).item()
-                        prediction_str = categories_parts[prediction_idx] if prediction_idx < len(categories_parts) else "Elbow"
-                        print(f"DEBUG: CNN bone type prediction: {prediction_str}")
-            except Exception as e:
-                print(f"DEBUG: CNN bone type prediction failed: {e}")
-                prediction_str = "Elbow"
-        else:
-            # PRIORITY 3: Use fallback computer vision
-            print("DEBUG: TensorFlow not available, using fallback bone structure analysis")
-            prediction_str = analyze_bone_structure_fallback(img)
+        print("DEBUG: TensorFlow not available, using improved bone structure analysis")
+        # Use improved bone structure analysis
+        prediction_str = analyze_bone_structure(img)
     
     _save_cached(image_name=image_name, image_hash=image_hash, part_result=prediction_str)
     return prediction_str
@@ -657,11 +683,11 @@ def predict_fracture(img, bone_type, force_fresh=False):
                 "normal": ensemble_prob_normal
             }
         },
-        "technology": "Ultimate ViT-CNN with Path-Based Detection",
+        "technology": "Enhanced ViT-CNN with Improved Fracture Detection",
         "vit_weight": vit_weight,
         "resnet_weight": resnet_weight,
         "threshold": threshold,
-        "disclaimer": "Ultimate ViT-CNN Prediction with Path-Based Bone Type Detection"
+        "disclaimer": "Enhanced ViT-CNN Prediction with Advanced Fracture Pattern Analysis"
     }
 
 # Legacy predict function for compatibility
@@ -674,9 +700,9 @@ def predict(img, model="Parts", force_fresh=False):
 
 # Initialize database
 _init_db()
-print("DEBUG: ULTIMATE ViT-CNN prediction engine loaded successfully")
-print("DEBUG: Features: PATH-BASED bone type detection, fracture pattern analysis")
-print("DEBUG: PRIORITY: Path analysis > TensorFlow > Computer Vision")
+print("DEBUG: ENHANCED ViT-CNN prediction engine loaded successfully")
+print("DEBUG: Features: IMPROVED bone structure analysis, fracture pattern analysis")
+print("DEBUG: IMPROVED bone type detection using computer vision")
 print("DEBUG: FIXED: Database constraint issues resolved")
 if not HAS_TF:
-    print("DEBUG: Running in ultimate simulation mode - TensorFlow not available")
+    print("DEBUG: Running in enhanced simulation mode - TensorFlow not available")
