@@ -1,6 +1,19 @@
 import os
 import PIL.Image as PILImage
-import google.generativeai as genai
+try:
+    import google.genai as genai
+    HAS_NEW_GENAI = True
+    print("Using new google.genai package")
+except ImportError:
+    try:
+        import google.generativeai as genai
+        HAS_NEW_GENAI = False
+        print("Using deprecated google.generativeai package")
+    except ImportError:
+        HAS_NEW_GENAI = False
+        print("google.genai package not available")
+        exit(1)
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -11,14 +24,26 @@ if not api_key:
     exit(1)
 
 genai.configure(api_key=api_key)
-model = genai.GenerativeModel("gemini-1.5-flash")
 
-# Test with a simple prompt
-try:
-    response = model.generate_content("Say 'Gemini is active'")
-    print(f"Connection test: {response.text.strip()}")
-except Exception as e:
-    print(f"Connection test failed: {e}")
+# Test with different model names
+model_names = ["gemini-1.5-flash", "gemini-1.0-flash", "gemini-pro"]
+model = None
+
+for model_name in model_names:
+    try:
+        model = genai.GenerativeModel(model_name)
+        # Test the model with a simple prompt
+        response = model.generate_content("Say 'Gemini is active'")
+        if response.text:
+            print(f"✅ Model {model_name}: {response.text.strip()}")
+            break
+    except Exception as e:
+        print(f"❌ Model {model_name} failed: {e}")
+
+if not model:
+    print("❌ All models failed")
+else:
+    print(f"✅ Using model: {model_name}")
 
 # If we have an image path from the user's latest upload, we could test it.
 # Since I don't have the path, let's look at the media directory to see if I can find it.

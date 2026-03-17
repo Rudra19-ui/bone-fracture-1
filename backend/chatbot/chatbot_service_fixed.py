@@ -30,7 +30,7 @@ class ChatbotService:
         if HAS_GENAI and api_key and api_key != "your_gemini_api_key_here" and len(api_key) > 5:
             try:
                 # Try different model names in order of preference
-                model_names = ["gemini-2.5-flash", "gemini-pro"]
+                model_names = ["gemini-1.5-flash", "gemini-pro"]
                 model = None
                 last_error = None
                 

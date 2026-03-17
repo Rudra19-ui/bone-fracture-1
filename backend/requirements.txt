@@ -8,4 +8,4 @@ pillow
 opencv-python-headless
 numpy
 tensorflow-cpu
-google-generativeai
+google-genai
