@@ -2,8 +2,14 @@ import os
 try:
     import google.genai as genai
     HAS_GENAI = True
+    print("Using latest google.genai package")
 except ImportError:
-    HAS_GENAI = False
+    try:
+        import google.generativeai as genai
+        HAS_GENAI = True
+        print("Warning: Using deprecated google.generativeai package. Consider upgrading to google.genai")
+    except ImportError:
+        HAS_GENAI = False
 from dotenv import load_dotenv
 
 # Load environment variables
