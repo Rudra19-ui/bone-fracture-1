@@ -604,16 +604,24 @@ body {
 .result-content {
   display: flex;
   flex-direction: column;
+  gap: 2px;
+  flex: 1;
 }
 
 .result-label {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
 }
 
 .result-value {
-  font-weight: 600;
-  font-size: 16px;
+  font-weight: 800;
+  font-size: 20px;
+  color: white;
+  line-height: 1.1;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
 }
 
 .detailed-analysis {

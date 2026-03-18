@@ -54,7 +54,7 @@ echo [1/2] Building and Starting Containers...
 echo This may take a few minutes on the first run...
 echo.
 
-docker-compose up --build -d
+docker-compose up --build -d --force-recreate
 
 if %errorlevel% neq 0 (
     echo.
