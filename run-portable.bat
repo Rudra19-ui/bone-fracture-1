@@ -19,8 +19,14 @@ if %errorlevel% neq 0 (
 
 REM Check if .env exists in backend, create if not
 if not exist backend\.env (
-    echo [INFO] Creating backend/.env from template...
-    copy backend\.env.template backend\.env >nul
+    if exist backend\.env.template (
+        echo [INFO] Creating backend/.env from template...
+        copy backend\.env.template backend\.env >nul
+    ) else (
+        echo [INFO] Creating new backend/.env file...
+        echo DJANGO_DEBUG=True > backend\.env
+        echo DJANGO_SECRET_KEY=portable-secret-key-!random! >> backend\.env
+    )
 )
 
 REM Check if GEMINI_API_KEY is set
@@ -33,7 +39,10 @@ if "!KEY_FOUND!"=="0" (
     echo Please get one at: https://aistudio.google.com/app/apikey
     set /p "USER_KEY=Paste your Gemini API Key here (or press Enter to skip): "
     if not "!USER_KEY!"=="" (
-        echo GEMINI_API_KEY=!USER_KEY! > backend\.env
+        REM Remove existing key line if it exists but is invalid
+        findstr /V "GEMINI_API_KEY" backend\.env > backend\.env.tmp
+        move /Y backend\.env.tmp backend\.env >nul
+        echo GEMINI_API_KEY=!USER_KEY! >> backend\.env
         echo [SUCCESS] API Key saved to backend/.env
     ) else (
         echo [WARNING] Continuing without API key. Chatbot will run in Limited Mode.

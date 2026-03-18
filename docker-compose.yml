@@ -1,6 +1,8 @@
 services:
   backend:
-    build: ./backend
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
     ports:
       - "8000:10000"
     volumes:
@@ -11,11 +13,15 @@ services:
     environment:
       - DJANGO_DEBUG=True
       - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,backend
-      - CORS_ALLOWED_ORIGINS=http://localhost:3000
+      - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
     restart: always
 
   frontend:
-    build: ./bone-fracture-web
+    build:
+      context: ./bone-fracture-web
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=http://localhost:8000
     ports:
       - "3000:80"
     depends_on:

@@ -17,43 +17,20 @@
 
 ---
 
-## 🚀 Quick Start (Recommended for Beginners)
+## 🚀 Quick Start (Portable Docker Run)
 
-### **Option 1: One-Click Docker Setup (Easiest)**
+**The most reliable way to run this on any computer with zero installation (except Docker).**
 
-**Perfect for users who want everything to work automatically**
-
-#### **Prerequisites**:
-- Windows 10/11 with Docker Desktop installed
-- Google Gemini API Key (free)
-
-#### **Installation Steps**:
-
-1. **Install Docker Desktop** (5 minutes)
-   - Download: [https://www.docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop)
-   - Install with default settings
-   - Restart your computer
-
-2. **Get Gemini API Key** (2 minutes)
-   - Visit: [https://aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
-   - Sign in with Google account
-   - Click "Create API Key"
-   - Copy the key (starts with `AIza...`)
-
-3. **Run the Project** (1 command)
-   ```bash
-   # Double-click this file OR run in terminal:
-   .\run-portable.bat
-   ```
-   
-4. **Enter API Key** when prompted
-5. **Access the Application**: http://localhost:3000
-
-**Total Time**: ~10 minutes
+1.  **Install Docker Desktop**: [Download for Windows](https://www.docker.com/products/docker-desktop)
+2.  **Get Gemini API Key**: [Get it at Google AI Studio](https://aistudio.google.com/app/apikey)
+3.  **Run with One Click**:
+    - Double-click **`run-portable.bat`** in the root folder.
+    - Paste your API key when prompted.
+    - The dashboard will automatically open at `http://localhost:3000`.
 
 ---
 
-### **Option 2: Manual Setup (For Developers)**
+## 🛠️ Manual Local Setup (Developers)
 
 **For users who want more control or development environment**
 
